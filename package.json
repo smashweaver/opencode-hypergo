@@ -1,0 +1,19 @@
+{
+  "name": "opencode-hypergo",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./runner": "./src/runner.mjs"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "dependencies": {
+    "@opencode/plugin": "2.4.1"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}
