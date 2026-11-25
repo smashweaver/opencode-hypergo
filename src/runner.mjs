@@ -1,3 +1,25 @@
+/**
+ * LEARN: Standalone grant CLI + sandboxed executor — plain Node, no OpenCode
+ * API. This file shows the other half of the tool-security story: OpenCode
+ * only supplies WHO is calling (sessionID/agent in the tool context); this
+ * runner decides WHAT they may run and WHERE.
+ *
+ * Two roles:
+ *  - CLI (`grant`/`close`): the orchestrator's shell creates the grant file
+ *    before a child session exists. A tool call can never create one.
+ *  - `runSpike()`: called by the tool executor in src/index.ts AFTER
+ *    `ctx.permission.assert`. It re-checks the identity against the stored
+ *    grant, then runs the script inside bubblewrap with prlimit caps.
+ *
+ * Identity flows one way: OpenCode → plugin context → this runner. The model
+ * never gets to choose the session or role a grant belongs to.
+ *
+ * DOCS
+ * - How tool identity reaches a plugin (sessionID/agent/messageID/callID):
+ *     https://opencode.ai/docs/build/plugins/server (section "Permissions")
+ * - Permission rules that decide whether the tool runs at all:
+ *     https://opencode.ai/docs/permissions/
+ */
 // Local Linux runner. Only the parent prepares grants; a tool call never creates one.
 import { execFile } from "node:child_process";
 import {

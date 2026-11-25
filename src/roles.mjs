@@ -1,3 +1,25 @@
+/**
+ * LEARN: Agent (role) definitions — pure data, no OpenCode imports.
+ *
+ * Each entry here becomes an OpenCode v2 agent definition (Agent.Info) when
+ * src/index.ts applies it through `ctx.agent.transform` + `editor.update`.
+ * An agent = system prompt + mode + permissions + optional model/display
+ * fields. Markdown agent files (`.opencode/agents/<name>.md`) hold the same
+ * shape; this package instead injects the definitions from code.
+ *
+ * PERMISSIONS ARE ORDERED — the LAST matching rule wins, so broad rules come
+ * first and exceptions follow. Every agent starts with OpenCode's built-in
+ * base policy (allow-all, then .env guards); agent rules are APPENDED to it,
+ * not replaced.
+ *
+ * DOCS
+ * - Agent options (mode, system, model, permissions, hidden, request):
+ *     https://opencode.ai/docs/agents/
+ * - Rule fields, effects, wildcards, "last matching rule wins":
+ *     https://opencode.ai/docs/permissions/
+ * - The default base policy every agent inherits:
+ *     https://opencode.ai/docs/permissions/#defaults
+ */
 import { readFileSync } from "node:fs";
 
 const instructions = (name) => readFileSync(new URL(`./assets/${name}.md`, import.meta.url), "utf8").trim();
@@ -7,6 +29,9 @@ const defaultPermissions = [
   { action: "read", resource: "*.env.*", effect: "ask" },
   { action: "read", resource: "*.env.example", effect: "allow" },
 ];
+// LEARN: deny-by-default pattern — start with `deny *` then allow only what
+// the role needs. Because the last matching rule wins, these allows override
+// the deny for exactly their scope.
 const denyAll = [{ action: "*", resource: "*", effect: "deny" }];
 const read = { action: "read", resource: "*", effect: "allow" };
 const noEnv = [

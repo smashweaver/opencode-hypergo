@@ -5,6 +5,24 @@ A project-local OpenCode V2 server plugin that supplies the HyperGo
 `hypergo_spike` tool. The package does not install or edit user-level agents,
 plugins, config, grants, or other repositories.
 
+## What is HyperGo
+
+HyperGo is a Go application framework that generates production-grade,
+browser-delivered PWAs for solo developers working with AI agents. Its
+backend is a modular monolith; pages are server-rendered, and a small native
+browser component progressively enhances them with JavaScript (form
+enhancement, status handling, retries). In short: this plugin gives OpenCode
+custom agents for the HyperGo SDLC — the orchestrator plans and dispatches,
+the worker implements, the researcher investigates in isolation, and the
+reviewer independently checks results.
+
+## Learning this repository
+
+This package doubles as a study aid for OpenCode v2 custom agents and server
+plugins. Start with `docs/learn.md` — it maps every source file to the concept
+it demonstrates and to the official documentation. Each source file also
+carries a `LEARN` header with the relevant doc links.
+
 ## Requirements
 
 - OpenCode **2.4.1** (the exact tested version).

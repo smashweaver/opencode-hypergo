@@ -1,3 +1,24 @@
+/**
+ * LEARN: Plugin entrypoint — the "server part" of an OpenCode v2 plugin.
+ *
+ * WHAT HAPPENS TO THIS FILE
+ * When a project lists this package under `plugins` in `opencode.json(c)`,
+ * OpenCode loads this file into its server process and calls `setup(ctx)`
+ * once. `ctx` is a client-like handle onto the running server plus
+ * plugin-only extensions: transforms, hooks, and permission APIs.
+ *
+ * This plugin does three things in `setup`:
+ *   1. Registers four custom agents (roles) via an agent transform.
+ *   2. Registers one custom tool (`hypergo_spike`) via a tool transform.
+ *   3. Installs a session "context" hook that filters model-visible tools.
+ *
+ * DOCS
+ * - Configure/load plugins:        https://opencode.ai/docs/plugins/
+ * - Plugin package layout:         https://opencode.ai/docs/build/plugins
+ * - Server plugin API (all of it): https://opencode.ai/docs/build/plugins/server
+ * - Agents (modes, options):       https://opencode.ai/docs/agents/
+ * - Permission rules:              https://opencode.ai/docs/permissions/
+ */
 import { Plugin } from "@opencode/plugin";
 import { roles } from "./roles.mjs";
 import { runSpike } from "./runner.mjs";
@@ -8,9 +29,14 @@ const toolName = "hypergo_spike";
 export default Plugin.define({
   id: "opencode-hypergo",
   async setup(ctx) {
-    // The public AgentEditor.update transform upserts: a missing ID becomes
-    // discoverable in the same location registry. Probe-tested on OpenCode
-    // 2.4.1; use only the public transform API.
+    // LEARN: agent transform. `editor.update(id, fn)` edits an agent draft in
+    // place; on this release (2.4.1) an update to a MISSING id materializes
+    // that agent in the registry — an observed behavior, not a documented
+    // guarantee. All fields we touch exist on Agent.Info; optional ones
+    // (`model`, `steps`, `color`) are cleared so a colliding definition
+    // cannot leak stale values.
+    // Docs: https://opencode.ai/docs/build/plugins/server (section "Agent")
+    //       https://opencode.ai/docs/agents/ (agent options and merging)
     await ctx.agent.transform((editor) => {
       for (const role of roles) {
         editor.update(role.id, (agent) => {
@@ -35,6 +61,13 @@ export default Plugin.define({
       }
     });
 
+    // LEARN: tool transform. `editor.add` REGISTERS a new tool (agents use
+    // `update` to upsert; tools need `add` to be created). The definition has
+    // a JSON-schema `input`, `options` (codemode: false = never wrap this in
+    // Code Mode), and an `execute` handler. `execute` receives the validated
+    // input plus a context carrying OpenCode-supplied identity
+    // (sessionID/agent/messageID/callID) and an AbortSignal.
+    // Docs: https://opencode.ai/docs/build/plugins/server (section "Tools")
     await ctx.tool.transform((editor) => editor.add({
       name: toolName,
       description: "Execute a bounded shell experiment in your assigned isolated scratch run. Read /input; write /work. Requires a grant from your orchestrator.",
@@ -49,8 +82,14 @@ export default Plugin.define({
         },
       },
       execute: async (input, context) => {
-        // OpenCode supplies identity and cancellation; the model cannot choose
-        // the role or session that a grant belongs to.
+        // LEARN: permission.assert evaluates the session's ordered permission
+        // rules for (action, resources). Identity comes from OpenCode's
+        // context — never from model-controlled tool input — so the model
+        // cannot choose which role or session a grant belongs to. `source`
+        // ties the prompt to this exact tool call; `save: []` stores nothing
+        // on "allow always". Let deny/ask errors propagate.
+        // Docs: https://opencode.ai/docs/build/plugins/server (section "Permissions")
+        //       https://opencode.ai/docs/permissions/ (rules, effects, matching)
         await ctx.permission.assert({
           sessionID: context.sessionID,
           agent: context.agent,
@@ -63,6 +102,13 @@ export default Plugin.define({
       },
     }));
 
+    // LEARN: session "context" hook. It runs for every agent-loop model
+    // request and may edit `event.system`, `event.messages`, `event.tools`,
+    // and `event.options` for that outgoing call only — persisted config is
+    // untouched. We use it to remove tools the model should not see at all
+    // (defense in depth on top of the role permission rules above).
+    // Docs: https://opencode.ai/docs/build/plugins/server (section "Hooks" →
+    //       "Sessions" → model requests / "context")
     // Restrict the model-visible tools as well as the role permission rules:
     // session/worktree utilities may not check edit or shell permissions.
     await ctx.session.hook("context", (event) => filterTools(event.agent, event.tools));

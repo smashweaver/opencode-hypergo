@@ -1,3 +1,15 @@
+/**
+ * LEARN: Model-free tests. These run with plain `node --test` (or `bun test`)
+ * and check the packaged DATA, not a live OpenCode server: role ids/modes,
+ * the ordered permission rules, and what the "context" hook leaves in the
+ * model-visible tool record. To verify against a real server instead, load
+ * the plugin in a project and run `opencode debug agents`.
+ *
+ * DOCS
+ * - Agents / permissions concepts these tests encode:
+ *     https://opencode.ai/docs/agents/
+ *     https://opencode.ai/docs/permissions/
+ */
 import assert from "node:assert/strict";
 import test from "node:test";
 import { roles } from "../src/roles.mjs";
